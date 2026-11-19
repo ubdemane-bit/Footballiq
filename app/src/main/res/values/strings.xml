@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Football IQ</string>
+    <string name="tagline">Deterministic Elo &amp; Poisson Match Intelligence</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="nav_predict">Predict</string>
+    <string name="nav_scan">Scan</string>
+    <string name="nav_matches">Matches</string>
+    <string name="nav_backtest">Backtest</string>
+    <string name="nav_history">History</string>
+    <string name="generate_prediction">Generate Prediction</string>
+    <string name="insufficient_data_message">Not enough information for a reliable prediction.</string>
+    <string name="lock_prediction">Lock Pre-Kickoff Record</string>
+    <string name="import_api_data">Plug Football API</string>
+    <string name="add_match">Add Match</string>
+    <string name="load_sample_season">Load 132-Match Dataset</string>
+</resources>

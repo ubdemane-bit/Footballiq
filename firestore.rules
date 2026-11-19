@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidMatch(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.home is string && data.home.size() >= 1 && data.home.size() <= 60 &&
+             data.away is string && data.away.size() >= 1 && data.away.size() <= 60 &&
+             data.home != data.away &&
+             data.hg is int && data.hg >= 0 && data.hg <= 30 &&
+             data.ag is int && data.ag >= 0 && data.ag <= 30 &&
+             data.matchDate is string && data.matchDate.size() == 10 &&
+             data.matchDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+             data.source in ['manual', 'api', 'seed'];
+    }
+
+    function isValidPredictionRecord(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.fixtureId is string && data.fixtureId.size() >= 1 && data.fixtureId.size() <= 128 &&
+             data.homeTeam is string && data.homeTeam.size() >= 1 && data.homeTeam.size() <= 60 &&
+             data.awayTeam is string && data.awayTeam.size() >= 1 && data.awayTeam.size() <= 60 &&
+             data.homeTeam != data.awayTeam &&
+             data.kickoffUtc is string && data.kickoffUtc.size() >= 10 && data.kickoffUtc.size() <= 40 &&
+             data.modelVersion is string && data.modelVersion.size() >= 1 && data.modelVersion.size() <= 64 &&
+             data.createdUtc is string && data.createdUtc.size() >= 10 && data.createdUtc.size() <= 40 &&
+             data.payloadJson is string && data.payloadJson.size() >= 2 && data.payloadJson.size() <= 16384 &&
+             data.sha256 is string && data.sha256.size() == 64 && data.sha256.matches('^[a-f0-9]{64}$') &&
+             data.safePick is string && data.safePick.size() >= 1 && data.safePick.size() <= 40 &&
+             data.smartPick is string && data.smartPick.size() >= 1 && data.smartPick.size() <= 80 &&
+             data.exactScore is string && data.exactScore.size() >= 3 && data.exactScore.size() <= 12;
+    }
+
+    match /users/{userId}/matches/{matchId} {
+      allow get: if isSignedIn() && isValidId(matchId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(matchId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'home', 'away', 'hg', 'ag', 'matchDate', 'source', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'home', 'away', 'hg', 'ag', 'matchDate', 'source', 'createdAt', 'updatedAt']) &&
+                       isValidMatch(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(matchId) &&
+                       request.auth.uid == userId &&
+                       isValidMatch(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['home', 'away', 'hg', 'ag', 'matchDate', 'source', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(matchId) && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/predictionRecords/{recordId} {
+      allow get: if isSignedIn() && isValidId(recordId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(recordId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'fixtureId', 'homeTeam', 'awayTeam', 'kickoffUtc',
+                         'modelVersion', 'createdUtc', 'payloadJson', 'sha256',
+                         'safePick', 'smartPick', 'exactScore', 'createdAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'fixtureId', 'homeTeam', 'awayTeam', 'kickoffUtc',
+                         'modelVersion', 'createdUtc', 'payloadJson', 'sha256',
+                         'safePick', 'smartPick', 'exactScore', 'createdAt'
+                       ]) &&
+                       isValidPredictionRecord(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time;
+
+      // Immutable pre-kickoff ledger: INSERT only; UPDATE and DELETE are permanently forbidden.
+      allow update, delete: if false;
+    }
+  }
+}

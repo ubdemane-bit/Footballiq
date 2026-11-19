@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "MatchDoc": {
+      "title": "MatchDoc",
+      "description": "Historical or logged football match result feeding the Elo and Poisson prediction engine.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "home": { "type": "string", "description": "Home team name (1..60 chars)." },
+        "away": { "type": "string", "description": "Away team name (1..60 chars, distinct from home)." },
+        "hg": { "type": "integer", "description": "Home goals scored (0..30)." },
+        "ag": { "type": "integer", "description": "Away goals scored (0..30)." },
+        "matchDate": { "type": "string", "description": "ISO calendar date YYYY-MM-DD." },
+        "source": { "type": "string", "enum": ["manual", "api", "seed"], "description": "Origin of the match record." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "home", "away", "hg", "ag", "matchDate", "source", "createdAt", "updatedAt"]
+    },
+    "PredictionRecordDoc": {
+      "title": "PredictionRecordDoc",
+      "description": "Immutable, append-only pre-kickoff prediction ledger entry signed with SHA-256.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "fixtureId": { "type": "string", "description": "Fixture identifier." },
+        "homeTeam": { "type": "string", "description": "Home team name." },
+        "awayTeam": { "type": "string", "description": "Away team name." },
+        "kickoffUtc": { "type": "string", "description": "Scheduled kickoff timestamp in ISO-8601 UTC." },
+        "modelVersion": { "type": "string", "description": "Deterministic model version string." },
+        "createdUtc": { "type": "string", "description": "Client creation UTC timestamp before kickoff." },
+        "payloadJson": { "type": "string", "description": "Canonical sorted JSON prediction payload." },
+        "sha256": { "type": "string", "description": "64-char lowercase hex SHA-256 digest of fixtureId|kickoffUtc|modelVersion|payloadJson." },
+        "safePick": { "type": "string", "description": "Option 1 double chance pick." },
+        "smartPick": { "type": "string", "description": "Option 2 smart market pick." },
+        "exactScore": { "type": "string", "description": "Option 3 modal score prediction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." }
+      },
+      "required": [
+        "userId", "fixtureId", "homeTeam", "awayTeam", "kickoffUtc",
+        "modelVersion", "createdUtc", "payloadJson", "sha256",
+        "safePick", "smartPick", "exactScore", "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/matches/{matchId}": {
+      "schema": { "$ref": "#/entities/MatchDoc" },
+      "description": "User-scoped football match results for Elo and Poisson modeling."
+    },
+    "/users/{userId}/predictionRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/PredictionRecordDoc" },
+      "description": "Append-only immutable pre-kickoff prediction records."
+    }
+  }
+}

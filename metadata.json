@@ -1,0 +1,6 @@
+{
+  "name": "Football IQ",
+  "description": "Deterministic football prediction engine with Elo ratings, Poisson score matrices, walk-forward backtesting, and immutable pre-kickoff SHA-256 records.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
